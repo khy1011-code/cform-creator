@@ -24,12 +24,16 @@ create table if not exists public.leads (
   phone       text,
   email       text,
   answers     jsonb default '{}'::jsonb,
+  admin_notes text,                          -- Lead Center note (admin only)
+  tags        jsonb default '[]'::jsonb,     -- Lead Center tags  (admin only)
   created_at  timestamptz default now()
 );
 
 -- If you ran an earlier version, add the new columns:
-alter table public.leads add column if not exists form_slug  text;
-alter table public.leads add column if not exists form_title text;
+alter table public.leads add column if not exists form_slug   text;
+alter table public.leads add column if not exists form_title  text;
+alter table public.leads add column if not exists admin_notes text;
+alter table public.leads add column if not exists tags        jsonb default '[]'::jsonb;
 
 -- ===================================================================
 -- Row Level Security
@@ -59,3 +63,7 @@ create policy "admins can read leads"
 drop policy if exists "admins can delete leads" on public.leads;
 create policy "admins can delete leads"
   on public.leads for delete to authenticated using (true);
+
+drop policy if exists "admins can update leads" on public.leads;
+create policy "admins can update leads"
+  on public.leads for update to authenticated using (true) with check (true);

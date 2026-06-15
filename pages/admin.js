@@ -3,7 +3,7 @@ import Head from "next/head";
 import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
 import { DEFAULT_CONTENT } from "../lib/content";
 import { applyTheme } from "../lib/applyTheme";
-import { listLeads, deleteLead } from "../lib/leads";
+import { listLeads, deleteLead, updateLead } from "../lib/leads";
 import {
   listForms, createForm, updateForm, deleteForm,
   cleanSlug, isSlugAvailable, ensureSampleForm,
@@ -280,6 +280,7 @@ function LeadCenter({ forms }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [openId, setOpenId] = useState(null); // which lead row is expanded
 
   async function refresh() {
     setLoading(true);
@@ -290,14 +291,25 @@ function LeadCenter({ forms }) {
 
   async function remove(id) {
     if (!confirm("Delete this lead permanently?")) return;
-    await deleteLead(id); refresh();
+    await deleteLead(id);
+    if (openId === id) setOpenId(null);
+    refresh();
+  }
+
+  // Persist a note/tags change locally (instant UI) + to the database.
+  async function patchLead(id, patch) {
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+    try { await updateLead(id, patch); } catch (e) { alert("Couldn't save: " + (e.message || e)); }
   }
 
   const shown = filter === "all" ? leads : leads.filter((l) => l.form_slug === filter);
 
   function exportCsv() {
-    const rows = [["Date", "Form", "Name", "Phone", "Email", "Answers"]];
-    shown.forEach((l) => rows.push([fmt(l.created_at), l.form_title || l.form_slug || "", l.name || "", l.phone || "", l.email || "", JSON.stringify(l.answers || {})]));
+    const rows = [["Date", "Form", "Name", "Phone", "Email", "Tags", "Note", "Answers"]];
+    shown.forEach((l) => rows.push([
+      fmt(l.created_at), l.form_title || l.form_slug || "", l.name || "", l.phone || "", l.email || "",
+      (l.tags || []).join("; "), l.admin_notes || "", JSON.stringify(l.answers || {}),
+    ]));
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = "leads.csv"; a.click();
@@ -308,7 +320,7 @@ function LeadCenter({ forms }) {
       <div className="admin-row" style={{ justifyContent: "space-between" }}>
         <div>
           <h2>Lead Center</h2>
-          <p className="hint">Submissions across all your forms, newest first.</p>
+          <p className="hint">Click a lead to expand. Notes &amp; tags are private to you (not sent to GHL).</p>
         </div>
         <div className="admin-row">
           <select className="admin-input" style={{ width: "auto" }} value={filter} onChange={(e) => setFilter(e.target.value)}>
@@ -323,27 +335,94 @@ function LeadCenter({ forms }) {
       {loading ? <p className="hint">Loading leads…</p> : shown.length === 0 ? (
         <p className="hint">No leads yet for this selection.</p>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table className="lead-table">
-            <thead><tr><th>Date / Time</th><th>Form</th><th>Name</th><th>Phone</th><th>Email</th><th>Answers</th><th></th></tr></thead>
-            <tbody>
-              {shown.map((l) => (
-                <tr key={l.id}>
-                  <td style={{ whiteSpace: "nowrap" }}>{fmt(l.created_at)}</td>
-                  <td>{l.form_title || l.form_slug || "—"}</td>
-                  <td>{l.name}</td>
-                  <td>{l.phone}</td>
-                  <td>{l.email}</td>
-                  <td>
-                    {Object.entries(l.answers || {}).map(([k, v]) => (
-                      <div key={k} style={{ marginBottom: 4 }}><b style={{ color: "#aab1c0" }}>{k}:</b> {String(v) || "—"}</div>
-                    ))}
-                  </td>
-                  <td><button className="admin-btn danger small" onClick={() => remove(l.id)}>Delete</button></td>
-                </tr>
+        <div className="lead-accordion">
+          {shown.map((l) => (
+            <LeadRow
+              key={l.id}
+              lead={l}
+              open={openId === l.id}
+              onToggle={() => setOpenId(openId === l.id ? null : l.id)}
+              onPatch={(patch) => patchLead(l.id, patch)}
+              onDelete={() => remove(l.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LeadRow({ lead, open, onToggle, onPatch, onDelete }) {
+  const tags = lead.tags || [];
+  const [note, setNote] = useState(lead.admin_notes || "");
+  const [newTag, setNewTag] = useState("");
+
+  // keep local note in sync if the lead reloads
+  useEffect(() => { setNote(lead.admin_notes || ""); }, [lead.id]);
+
+  function addTag() {
+    const t = newTag.trim();
+    if (!t || tags.includes(t)) { setNewTag(""); return; }
+    onPatch({ tags: [...tags, t] });
+    setNewTag("");
+  }
+  function removeTag(t) { onPatch({ tags: tags.filter((x) => x !== t) }); }
+
+  return (
+    <div className={"lead-row" + (open ? " open" : "")}>
+      {/* ---- collapsed summary (always visible) ---- */}
+      <button className="lead-summary" onClick={onToggle}>
+        <span className={"lead-chevron" + (open ? " open" : "")}>▸</span>
+        <span className="lead-name">{lead.name || "—"}</span>
+        <span className="lead-meta">{lead.form_title || lead.form_slug || "—"}</span>
+        <span className="lead-meta lead-date">{fmt(lead.created_at)}</span>
+        <span className="lead-summary-tags">
+          {tags.slice(0, 3).map((t) => <span key={t} className="tag-chip mini">{t}</span>)}
+          {tags.length > 3 && <span className="tag-chip mini">+{tags.length - 3}</span>}
+        </span>
+      </button>
+
+      {/* ---- expanded detail ---- */}
+      {open && (
+        <div className="lead-detail">
+          <div className="lead-detail-grid">
+            <div><span className="lead-k">Phone</span><a href={`tel:${lead.phone}`}>{lead.phone || "—"}</a></div>
+            <div><span className="lead-k">Email</span><a href={`mailto:${lead.email}`}>{lead.email || "—"}</a></div>
+          </div>
+
+          <div className="lead-answers">
+            {Object.entries(lead.answers || {}).map(([k, v]) => (
+              <div key={k} className="lead-answer"><span className="lead-k">{k}</span><span>{String(v) || "—"}</span></div>
+            ))}
+          </div>
+
+          {/* Tags */}
+          <div>
+            <span className="admin-label">Tags</span>
+            <div className="tag-list">
+              {tags.length === 0 && <span className="hint" style={{ margin: 0 }}>No tags yet.</span>}
+              {tags.map((t) => (
+                <span key={t} className="tag-chip">{t}<button className="tag-x" onClick={() => removeTag(t)} aria-label="Remove tag">×</button></span>
               ))}
-            </tbody>
-          </table>
+            </div>
+            <div className="admin-row" style={{ marginTop: 8 }}>
+              <input className="admin-input" style={{ flex: 1, maxWidth: 260 }} placeholder="Add a custom tag…" value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }} />
+              <button className="admin-btn secondary small" onClick={addTag}>＋ Add tag</button>
+            </div>
+          </div>
+
+          {/* Note */}
+          <div style={{ marginTop: 14 }}>
+            <span className="admin-label">Note</span>
+            <textarea className="admin-textarea" placeholder="Private note about this lead…" value={note} onChange={(e) => setNote(e.target.value)} />
+            <div className="admin-row" style={{ marginTop: 6 }}>
+              <button className="admin-btn small" onClick={() => onPatch({ admin_notes: note })}
+                disabled={note === (lead.admin_notes || "")}>Save note</button>
+              <button className="admin-btn danger small" onClick={onDelete}>Delete lead</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
