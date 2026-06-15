@@ -69,6 +69,36 @@ If blank, leads still save — you just won't get an email.
 
 ---
 
+## 4b. Send leads to GoHighLevel (GHL)
+
+Each submitted lead can be pushed straight into your GHL CRM, where GHL stores
+the contact **and** sends the "new signup" email from a workflow.
+
+**Flow:** Meta ad → form link → client submits → app POSTs the full lead to your
+GHL **Inbound Webhook** → GHL workflow creates the contact + emails you.
+
+1. In GHL: **Automation → Workflows → Create Workflow** (start blank).
+2. Add trigger **"Inbound Webhook"** and **copy the webhook URL**.
+3. Put it in your env (and in Netlify env vars):
+   ```env
+   GHL_WEBHOOK_URL=https://services.leadconnectorhq.com/hooks/xxxx/webhook-trigger/yyyy
+   ```
+4. Submit one test lead so GHL captures a sample payload, then add workflow actions:
+   - **Create/Update Contact** → map `name` / `email` / `phone` / `notes` and any
+     `answers` fields onto the contact (and custom fields if you want each answer).
+   - **Send Email / Internal Notification** → your "new client signed up" alert.
+   - Optionally **Create Opportunity** to drop them into a pipeline.
+
+**Fields the app sends:** `name`, `first_name`, `last_name`, `email`, `phone`,
+`form_title`, `form_slug`, `source`, `submitted_at`, `notes` (all answers),
+the full `answers` object, plus Meta attribution: `utm_source`, `utm_medium`,
+`utm_campaign`, `utm_content`, `utm_term`, `fbclid`, `gclid`.
+
+> Tip: point the form's **Schedule My Appointment** button (CMS → Links →
+> *Schedule URL*) at your GHL **calendar booking link** to close the loop.
+
+---
+
 ## 5. Deploy to Netlify
 
 1. Push this folder to a GitHub repo.

@@ -46,6 +46,7 @@ export default function PublicForm() {
   const [answers, setAnswers] = useState({ q1: 0, q2: 0, notes: "" });
   const [contact, setContact] = useState({ name: "", phone: "", email: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [tracking, setTracking] = useState({});
 
   useEffect(() => {
     if (!slug) return;
@@ -56,6 +57,18 @@ export default function PublicForm() {
       setState("ready");
     });
   }, [slug]);
+
+  // Capture Meta / ad attribution from the link (?utm_source=…&fbclid=…)
+  // so it travels with the lead all the way into GHL.
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid", "gclid"];
+      const t = {};
+      keys.forEach((k) => { const v = p.get(k); if (v) t[k] = v; });
+      setTracking(t);
+    } catch (_) {}
+  }, []);
 
   if (state === "loading") {
     return <div className="ty-shell"><div className="app" /></div>;
@@ -92,6 +105,7 @@ export default function PublicForm() {
           [s.q2.title]: s.q2.options[answers.q2] ?? "",
           "Notes": answers.notes || "",
         },
+        tracking,
       });
       go(7);
     } catch (e) {
