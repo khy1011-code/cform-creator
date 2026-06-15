@@ -128,8 +128,8 @@ html, body {
 
 /* ===== PRICE ===== */
 .price-block { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
-.price-amount { font-family: var(--font-display); font-size: 52px; color: var(--gold); font-weight: 400; line-height: 1; }
-.price-amount sup { font-size: 26px; vertical-align: top; margin-top: 10px; }
+.price-amount { font-family: var(--font-display); font-size: 52px; color: var(--gold); font-weight: 400; line-height: 1; display: inline-flex; align-items: flex-start; }
+.price-amount sup { font-size: 26px; line-height: 1; margin-top: 7px; margin-right: 1px; vertical-align: baseline; }
 .price-note { font-size: 14px; color: var(--text-muted); line-height: 1.5; max-width: 160px; }
 
 /* ===== OPTIONS ===== */
