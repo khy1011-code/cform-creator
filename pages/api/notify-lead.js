@@ -21,25 +21,28 @@ async function pushToGHL(lead) {
   const url = process.env.GHL_WEBHOOK_URL;
   if (!url) return { skipped: true, reason: "GHL not configured" };
 
-  const answers = lead.answers || {};
   const tracking = lead.tracking || {};
+  const responses = lead.responses || {};
   const [firstName, ...rest] = String(lead.name || "").trim().split(" ");
-  const notes = Object.entries(answers)
-    .map(([q, a]) => `${q}: ${a}`)
-    .join("\n");
 
-  // Flat payload — easiest to map in a GHL workflow.
+  // Flat payload with FIXED top-level keys so GHL's mapping reference
+  // shows every field, including the quiz answers.
   const payload = {
-    name: lead.name || "",
-    first_name: firstName || "",
-    last_name: rest.join(" "),
+    // --- the 6 fields GHL must capture (exact key names) ---
+    full_name: lead.name || "",
     email: lead.email || "",
     phone: lead.phone || "",
+    bhrt_experience: responses.bhrt_experience || "",
+    wants_coordinator_call: responses.wants_coordinator_call || "",
+    notes: responses.notes || "",
+
+    // --- helpful extras (safe to ignore in GHL) ---
+    first_name: firstName || "",
+    last_name: rest.join(" "),
     form_title: lead.form_title || "",
     form_slug: lead.form_slug || "",
     source: tracking.utm_source || "Website form",
     submitted_at: lead.created_at || new Date().toISOString(),
-    notes,
     // Meta / ad attribution
     utm_source: tracking.utm_source || "",
     utm_medium: tracking.utm_medium || "",
@@ -48,8 +51,6 @@ async function pushToGHL(lead) {
     utm_term: tracking.utm_term || "",
     fbclid: tracking.fbclid || "",
     gclid: tracking.gclid || "",
-    // full answers object too, for nested mapping if preferred
-    answers,
   };
 
   try {

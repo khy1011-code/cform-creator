@@ -100,6 +100,15 @@ export default function PublicForm() {
         name: contact.name,
         phone: contact.phone,
         email: contact.email,
+        // Stable keys so the server can map them to fixed GHL field names,
+        // regardless of how the question text is worded in the CMS.
+        responses: {
+          bhrt_experience: s.q1.options[answers.q1] ?? "",
+          wants_coordinator_call: s.q2.options[answers.q2] ?? "",
+          notes: answers.notes || "",
+        },
+        // Human-readable copy (question text → answer) for the CMS Lead
+        // Center display and the email summary.
         answers: {
           [s.q1.title]: s.q1.options[answers.q1] ?? "",
           [s.q2.title]: s.q2.options[answers.q2] ?? "",
