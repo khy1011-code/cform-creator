@@ -66,7 +66,10 @@ function HumanCheck({ verified, onChange }) {
           sitekey: SITE_KEY,
           theme: "dark",
           callback: () => onChange(true),
-          "error-callback": () => onChange(false),
+          // If Cloudflare rejects the key/domain (e.g. 400020), don't trap
+          // the visitor on a broken widget — drop to the checkbox so the
+          // form still works while the Turnstile config is sorted out.
+          "error-callback": () => { onChange(false); setFallback(true); },
           "expired-callback": () => onChange(false),
         });
         clearInterval(iv);
