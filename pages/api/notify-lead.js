@@ -17,8 +17,21 @@ export default async function handler(req, res) {
 }
 
 /* ----------------------- GoHighLevel ----------------------- */
+// Pick the right GHL webhook for this form:
+//   1) a per-form entry in GHL_WEBHOOKS (JSON: { "slug": "url", ... })
+//   2) otherwise the default GHL_WEBHOOK_URL (what the 250 form uses today)
+function resolveGhlUrl(slug) {
+  try {
+    const map = JSON.parse(process.env.GHL_WEBHOOKS || "{}");
+    if (slug && map[slug]) return map[slug];
+  } catch (_) {
+    /* malformed GHL_WEBHOOKS — fall through to the default */
+  }
+  return process.env.GHL_WEBHOOK_URL || "";
+}
+
 async function pushToGHL(lead) {
-  const url = process.env.GHL_WEBHOOK_URL;
+  const url = resolveGhlUrl(lead.form_slug);
   if (!url) return { skipped: true, reason: "GHL not configured" };
 
   const tracking = lead.tracking || {};
