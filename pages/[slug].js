@@ -41,19 +41,25 @@ function Progress({ pct, label }) {
 function HumanCheck({ verified, onChange }) {
   const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const boxRef = useRef(null);
+  // If Turnstile can't load (network/adblock), fall back to the checkbox
+  // so a real visitor is never stuck on a blank, un-passable step.
+  const [fallback, setFallback] = useState(false);
 
   useEffect(() => {
     if (!SITE_KEY) return;
     if (!document.getElementById("cf-turnstile-script")) {
       const sc = document.createElement("script");
       sc.id = "cf-turnstile-script";
-      sc.src = "https://challenge.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
       sc.async = true;
       sc.defer = true;
+      sc.onerror = () => setFallback(true);
       document.head.appendChild(sc);
     }
     let widgetId;
+    let tries = 0;
     const iv = setInterval(() => {
+      tries += 1;
       if (window.turnstile && boxRef.current && !boxRef.current.dataset.done) {
         boxRef.current.dataset.done = "1";
         widgetId = window.turnstile.render(boxRef.current, {
@@ -64,6 +70,10 @@ function HumanCheck({ verified, onChange }) {
           "expired-callback": () => onChange(false),
         });
         clearInterval(iv);
+      } else if (tries > 40) {
+        // ~8s with no widget → assume it won't load; show the checkbox.
+        clearInterval(iv);
+        setFallback(true);
       }
     }, 200);
     return () => {
@@ -72,7 +82,7 @@ function HumanCheck({ verified, onChange }) {
     };
   }, [SITE_KEY]);
 
-  if (!SITE_KEY) {
+  if (!SITE_KEY || fallback) {
     return (
       <label className="human-fallback">
         <input type="checkbox" checked={verified} onChange={(e) => onChange(e.target.checked)} />
