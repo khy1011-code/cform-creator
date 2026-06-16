@@ -5,6 +5,7 @@ import { getFormBySlug } from "../lib/forms";
 import { applyTheme } from "../lib/applyTheme";
 import { saveLead } from "../lib/leads";
 import { Wordmark } from "../components/Logo";
+import { trackLead } from "../components/MetaPixel";
 
 const CheckIcon = () => (
   <div className="check-icon">
@@ -189,6 +190,7 @@ export default function PublicForm() {
         },
         tracking,
       });
+      trackLead(form); // Meta Pixel "Lead" event, tagged with this form
       go("confirm");
     } catch (e) {
       alert("Sorry, something went wrong saving your details. Please try again.");
