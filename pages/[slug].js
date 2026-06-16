@@ -167,6 +167,12 @@ export default function PublicForm() {
 
   async function handleSubmit() {
     setSubmitting(true);
+    // Shared id so the browser Pixel + server CAPI "Lead" de-duplicate.
+    const eventId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : String(Date.now()) + Math.random();
+    const value = Number(s.intro.price) || undefined;
     try {
       await saveLead({
         form_slug: form.slug,
@@ -174,6 +180,10 @@ export default function PublicForm() {
         name: contact.name,
         phone: contact.phone,
         email: contact.email,
+        // Meta CAPI dedup + attribution (no health answers are sent to Meta):
+        event_id: eventId,
+        event_source_url: typeof window !== "undefined" ? window.location.href : "",
+        value,
         // Stable keys so the server can map them to fixed GHL field names,
         // regardless of how the question text is worded in the CMS.
         responses: {
@@ -190,7 +200,7 @@ export default function PublicForm() {
         },
         tracking,
       });
-      trackLead(form); // Meta Pixel "Lead" event, tagged with this form
+      trackLead(form, eventId, value); // browser Pixel "Lead" (dedupes with CAPI)
       go("confirm");
     } catch (e) {
       alert("Sorry, something went wrong saving your details. Please try again.");

@@ -6,13 +6,15 @@ import { useRouter } from "next/router";
 export const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "2169502100563220";
 
 // Fire a Meta "Lead" event, tagged so 250 vs 217 are distinguishable.
-export function trackLead(form) {
-  if (typeof window !== "undefined" && window.fbq) {
-    window.fbq("track", "Lead", {
-      content_name: form?.title || "",
-      content_category: form?.slug || "",
-    });
-  }
+// eventId is shared with the server-side CAPI event so Meta de-duplicates.
+export function trackLead(form, eventId, value) {
+  if (typeof window === "undefined" || !window.fbq) return;
+  const data = {
+    content_name: form?.title || "",
+    content_category: form?.slug || "",
+  };
+  if (value) { data.currency = "USD"; data.value = value; }
+  window.fbq("track", "Lead", data, eventId ? { eventID: eventId } : undefined);
 }
 
 export default function MetaPixel() {

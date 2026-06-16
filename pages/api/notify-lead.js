@@ -1,6 +1,9 @@
-// Runs when a new lead submits. Two independent, optional integrations:
+import crypto from "crypto";
+
+// Runs when a new lead submits. Independent, optional integrations:
 //   1) Email alert via Resend       (set RESEND_API_KEY / LEAD_NOTIFY_TO / _FROM)
 //   2) Push to GoHighLevel (GHL)    (set GHL_WEBHOOK_URL — an Inbound Webhook)
+//   3) Meta Conversions API "Lead"  (set META_CAPI_TOKEN)
 // If a given integration isn't configured, it's skipped — never errors.
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -12,8 +15,80 @@ export default async function handler(req, res) {
 
   results.email = await sendEmail(lead);
   results.ghl = await pushToGHL(lead);
+  results.capi = await sendMetaCAPI(lead, req);
 
   return res.status(200).json(results);
+}
+
+/* ----------------------- Meta Conversions API ----------------------- */
+// Sends a server-side "Lead" to Meta with hashed PII + the same event_id as
+// the browser pixel (so Meta de-duplicates). IMPORTANT: no health answers are
+// ever sent — only standard contact data — per Meta's health data policy.
+const sha256 = (v) => crypto.createHash("sha256").update(String(v)).digest("hex");
+const normEmail = (e) => String(e || "").trim().toLowerCase();
+const normPhone = (p) => {
+  let d = String(p || "").replace(/\D/g, "");
+  if (d.length === 10) d = "1" + d; // assume US if 10 digits
+  return d;
+};
+const hashed = (v) => (v ? [sha256(v)] : undefined);
+
+async function sendMetaCAPI(lead, req) {
+  const token = process.env.META_CAPI_TOKEN;
+  const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "2169502100563220";
+  if (!token || !pixelId) return { skipped: true, reason: "CAPI not configured" };
+
+  const cookies = req.cookies || {};
+  const tracking = lead.tracking || {};
+  const ip = String(req.headers["x-nf-client-connection-ip"] || req.headers["x-forwarded-for"] || "")
+    .split(",")[0].trim();
+  const ua = req.headers["user-agent"] || "";
+  const [firstName, ...rest] = String(lead.name || "").trim().split(" ");
+
+  let fbc = cookies._fbc || "";
+  if (!fbc && tracking.fbclid) fbc = `fb.1.${Date.now()}.${tracking.fbclid}`;
+
+  const user_data = {
+    em: lead.email ? hashed(normEmail(lead.email)) : undefined,
+    ph: lead.phone ? hashed(normPhone(lead.phone)) : undefined,
+    fn: firstName ? hashed(firstName.toLowerCase()) : undefined,
+    ln: rest.length ? hashed(rest.join(" ").toLowerCase()) : undefined,
+    client_ip_address: ip || undefined,
+    client_user_agent: ua || undefined,
+    fbp: cookies._fbp || undefined,
+    fbc: fbc || undefined,
+  };
+
+  const custom_data = { content_category: lead.form_slug || "" };
+  if (lead.value) { custom_data.currency = "USD"; custom_data.value = lead.value; }
+
+  const event = {
+    event_name: "Lead",
+    event_time: Math.floor(Date.now() / 1000),
+    action_source: "website",
+    event_id: lead.event_id || undefined,
+    event_source_url: lead.event_source_url || undefined,
+    user_data,
+    custom_data,
+  };
+
+  const body = { data: [event] };
+  // Optional: set META_CAPI_TEST_CODE to send to Events Manager → Test Events
+  // (for verification) instead of production. Remove it to go live.
+  if (process.env.META_CAPI_TEST_CODE) body.test_event_code = process.env.META_CAPI_TEST_CODE;
+
+  try {
+    const r = await fetch(`https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${encodeURIComponent(token)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return { skipped: true, reason: JSON.stringify(j).slice(0, 200) };
+    return { sent: true, events_received: j.events_received };
+  } catch (e) {
+    return { skipped: true, reason: String(e) };
+  }
 }
 
 /* ----------------------- GoHighLevel ----------------------- */
