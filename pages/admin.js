@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
 import { DEFAULT_CONTENT } from "../lib/content";
 import { applyTheme } from "../lib/applyTheme";
 import { listLeads, deleteLead, updateLead } from "../lib/leads";
+import { getFunnelEvents } from "../lib/track";
 import {
   listForms, createForm, updateForm, deleteForm,
   cleanSlug, isSlugAvailable, ensureSampleForm,
@@ -121,6 +122,7 @@ export default function Admin() {
           <div className="admin-tabs">
             <button className={"admin-tab" + (view === "forms" ? " active" : "")} onClick={() => setView("forms")}>🗂️ My Forms</button>
             <button className={"admin-tab" + (view === "leads" ? " active" : "")} onClick={() => setView("leads")}>📥 Lead Center</button>
+            <button className={"admin-tab" + (view === "insights" ? " active" : "")} onClick={() => setView("insights")}>📊 Funnel Insights</button>
           </div>
         )}
 
@@ -135,6 +137,9 @@ export default function Admin() {
 
         {/* ---------- LEAD CENTER ---------- */}
         {view === "leads" && <LeadCenter forms={forms} />}
+
+        {/* ---------- FUNNEL INSIGHTS ---------- */}
+        {view === "insights" && <FunnelInsights forms={forms} />}
 
         {/* ---------- FORM EDITOR ---------- */}
         {view === "edit" && editForm && (
@@ -432,6 +437,91 @@ function LeadRow({ lead, open, onToggle, onPatch, onDelete }) {
 function fmt(iso) {
   if (!iso) return "—";
   try { return new Date(iso).toLocaleString(); } catch (_) { return iso; }
+}
+
+/* ===================== FUNNEL INSIGHTS ===================== */
+const FUNNEL_STEPS = [
+  ["intro", "1 · Landing / Intro"],
+  ["verify", "2 · Human check"],
+  ["q1", "3 · Question 1"],
+  ["q2", "4 · Question 2"],
+  ["q3", "5 · Question 3 (notes)"],
+  ["contact", "6 · Contact info"],
+  ["review", "7 · Review"],
+  ["privacy", "8 · Privacy"],
+  ["confirm", "9 · Submitted ✅"],
+];
+
+function FunnelInsights({ forms }) {
+  const [events, setEvents] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function refresh() {
+    setLoading(true);
+    try {
+      const [e, l] = await Promise.all([getFunnelEvents(), listLeads()]);
+      setEvents(e); setLeads(l);
+    } catch (_) { setEvents([]); setLeads([]); }
+    setLoading(false);
+  }
+  useEffect(() => { refresh(); }, []);
+
+  // Count UNIQUE visitor sessions that reached each step, per form.
+  const byForm = {};
+  for (const ev of events) {
+    if (!ev || !ev.form_slug) continue;
+    const f = (byForm[ev.form_slug] = byForm[ev.form_slug] || {});
+    const s = (f[ev.step] = f[ev.step] || new Set());
+    s.add(ev.session_id);
+  }
+
+  // Show a card per form that has any data (plus any known forms with data).
+  const slugs = Object.keys(byForm);
+  const titleFor = (slug) => (forms.find((f) => f.slug === slug) || {}).title || slug;
+
+  return (
+    <div className="admin-card">
+      <div className="admin-row" style={{ justifyContent: "space-between" }}>
+        <div>
+          <h2>Funnel Insights</h2>
+          <p className="hint">Unique visitors that reached each step. Compare Step 1 to your Meta <b>PageViews</b> and “Submitted” to your Meta <b>Leads</b> — big gaps can signal bots or a tracking issue.</p>
+        </div>
+        <button className="admin-btn secondary small" onClick={refresh}>Refresh</button>
+      </div>
+
+      {loading ? <p className="hint">Loading…</p> : slugs.length === 0 ? (
+        <p className="hint">No funnel data yet. Once visitors hit your forms (and the <code>form_events</code> table exists), counts appear here.</p>
+      ) : (
+        slugs.map((slug) => {
+          const stepCounts = FUNNEL_STEPS.map(([k, label]) => ({ k, label, n: (byForm[slug][k] || new Set()).size }));
+          const top = stepCounts[0].n || 0;
+          const leadCount = leads.filter((l) => l.form_slug === slug).length;
+          const submitted = stepCounts[stepCounts.length - 1].n;
+          const cvr = top ? Math.round((submitted / top) * 1000) / 10 : 0;
+          return (
+            <div key={slug} className="funnel-card">
+              <div className="admin-row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
+                <h3 style={{ margin: 0, fontSize: 15 }}>{titleFor(slug)} <code style={{ color: "var(--gold)" }}>/{slug}</code></h3>
+                <span className="hint" style={{ margin: 0 }}>Step 1 → Submit: <b style={{ color: "var(--gold)" }}>{cvr}%</b> · Leads saved: <b>{leadCount}</b></span>
+              </div>
+              {stepCounts.map((row) => {
+                const pct = top ? Math.round((row.n / top) * 100) : 0;
+                const dropFromTop = top ? 100 - pct : 0;
+                return (
+                  <div className="funnel-row" key={row.k}>
+                    <div className="funnel-label">{row.label}</div>
+                    <div className="funnel-bar-wrap"><div className="funnel-bar" style={{ width: pct + "%" }} /></div>
+                    <div className="funnel-num">{row.n}<span className="funnel-pct">{pct}%</span></div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
 }
 
 /* ===================== SHARED FIELD HELPERS ===================== */

@@ -6,6 +6,7 @@ import { applyTheme } from "../lib/applyTheme";
 import { saveLead } from "../lib/leads";
 import { Wordmark } from "../components/Logo";
 import { trackLead } from "../components/MetaPixel";
+import { logStep } from "../lib/track";
 
 const CheckIcon = () => (
   <div className="check-icon">
@@ -131,6 +132,12 @@ export default function PublicForm() {
       setState("ready");
     });
   }, [slug]);
+
+  // Funnel analytics: record each step a visitor reaches (fire-and-forget,
+  // never blocks the form, submit, Pixel, CAPI or GHL).
+  useEffect(() => {
+    if (state === "ready" && form) logStep(form.slug, step);
+  }, [step, state, form]);
 
   // Capture Meta / ad attribution from the link (?utm_source=…&fbclid=…)
   // so it travels with the lead all the way into GHL.

@@ -67,3 +67,27 @@ create policy "admins can delete leads"
 drop policy if exists "admins can update leads" on public.leads;
 create policy "admins can update leads"
   on public.leads for update to authenticated using (true) with check (true);
+
+-- ===================================================================
+-- FUNNEL ANALYTICS: one row each time a visitor reaches a form step.
+-- Powers the admin "Funnel Insights" tab. Insert-only from the public
+-- form; admins read it. Lightweight and separate from leads.
+-- ===================================================================
+create table if not exists public.form_events (
+  id          bigint generated always as identity primary key,
+  form_slug   text,
+  step        text,
+  session_id  text,
+  created_at  timestamptz default now()
+);
+create index if not exists form_events_slug_idx on public.form_events (form_slug);
+
+alter table public.form_events enable row level security;
+
+drop policy if exists "anyone can insert events" on public.form_events;
+create policy "anyone can insert events"
+  on public.form_events for insert to anon, authenticated with check (true);
+
+drop policy if exists "admins read events" on public.form_events;
+create policy "admins read events"
+  on public.form_events for select to authenticated using (true);

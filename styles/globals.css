@@ -277,3 +277,12 @@ html, body {
 .tag-chip.mini { padding: 2px 8px; font-size: 11px; }
 .tag-x { background: none; border: none; color: var(--gold); cursor: pointer; font-size: 15px; line-height: 1; padding: 0; opacity: 0.7; }
 .tag-x:hover { opacity: 1; }
+
+/* ===== FUNNEL INSIGHTS ===== */
+.funnel-card { background: #14171f; border: 1px solid #232733; border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+.funnel-row { display: flex; align-items: center; gap: 12px; padding: 5px 0; }
+.funnel-label { width: 160px; flex-shrink: 0; font-size: 13px; color: #aab1c0; }
+.funnel-bar-wrap { flex: 1; height: 22px; background: #0f1115; border-radius: 6px; overflow: hidden; }
+.funnel-bar { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 6px; transition: width 0.4s ease; min-width: 2px; }
+.funnel-num { width: 84px; flex-shrink: 0; text-align: right; font-weight: 600; font-size: 14px; color: #e7e9ee; }
+.funnel-pct { color: #8b93a4; font-weight: 400; font-size: 12px; margin-left: 6px; }
