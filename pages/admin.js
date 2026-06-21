@@ -4,7 +4,7 @@ import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
 import { DEFAULT_CONTENT } from "../lib/content";
 import { applyTheme } from "../lib/applyTheme";
 import { listLeads, deleteLead, updateLead } from "../lib/leads";
-import { getFunnelEvents } from "../lib/track";
+import { getFunnelEvents, getSessionMeta } from "../lib/track";
 import {
   listForms, createForm, updateForm, deleteForm,
   cleanSlug, isSlugAvailable, ensureSampleForm,
@@ -452,20 +452,56 @@ const FUNNEL_STEPS = [
   ["confirm", "9 · Submitted ✅"],
 ];
 
+// Count occurrences of a field across rows → sorted [ [label, n], ... ].
+function tally(rows, field) {
+  const m = {};
+  for (const r of rows) {
+    const k = (r && r[field]) || "Unknown";
+    m[k] = (m[k] || 0) + 1;
+  }
+  return Object.entries(m).sort((a, b) => b[1] - a[1]);
+}
+
+function Breakdown({ title, rows, field, max }) {
+  const items = tally(rows, field);
+  const total = rows.length || 1;
+  const shown = max ? items.slice(0, max) : items;
+  return (
+    <div style={{ flex: 1, minWidth: 220 }}>
+      <span className="admin-label">{title}</span>
+      {shown.length === 0 && <p className="hint" style={{ margin: 0 }}>No data yet.</p>}
+      {shown.map(([label, n]) => {
+        const pct = Math.round((n / total) * 100);
+        return (
+          <div className="funnel-row" key={label}>
+            <div className="funnel-label" style={{ width: 120 }}>{label}</div>
+            <div className="funnel-bar-wrap"><div className="funnel-bar" style={{ width: pct + "%" }} /></div>
+            <div className="funnel-num">{n}<span className="funnel-pct">{pct}%</span></div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function FunnelInsights({ forms }) {
   const [events, setEvents] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [audienceForm, setAudienceForm] = useState("all");
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
     setLoading(true);
     try {
-      const [e, l] = await Promise.all([getFunnelEvents(), listLeads()]);
-      setEvents(e); setLeads(l);
-    } catch (_) { setEvents([]); setLeads([]); }
+      const [e, l, s] = await Promise.all([getFunnelEvents(), listLeads(), getSessionMeta()]);
+      setEvents(e); setLeads(l); setSessions(s);
+    } catch (_) { setEvents([]); setLeads([]); setSessions([]); }
     setLoading(false);
   }
   useEffect(() => { refresh(); }, []);
+
+  const audRows = audienceForm === "all" ? sessions : sessions.filter((s) => s.form_slug === audienceForm);
 
   // Count UNIQUE visitor sessions that reached each step, per form.
   const byForm = {};
@@ -488,6 +524,28 @@ function FunnelInsights({ forms }) {
           <p className="hint">Unique visitors that reached each step. Compare Step 1 to your Meta <b>PageViews</b> and “Submitted” to your Meta <b>Leads</b> — big gaps can signal bots or a tracking issue.</p>
         </div>
         <button className="admin-btn secondary small" onClick={refresh}>Refresh</button>
+      </div>
+
+      {/* ---- Audience / Targeting (device + location) ---- */}
+      <div className="funnel-card" style={{ marginBottom: 18 }}>
+        <div className="admin-row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
+          <h3 style={{ margin: 0, fontSize: 15 }}>🎯 Audience &amp; Targeting <span className="hint" style={{ margin: 0, fontWeight: 400 }}>· {audRows.length} sessions</span></h3>
+          <select className="admin-input" style={{ width: "auto" }} value={audienceForm} onChange={(e) => setAudienceForm(e.target.value)}>
+            <option value="all">All forms</option>
+            {forms.map((f) => <option key={f.id} value={f.slug}>{f.title}</option>)}
+          </select>
+        </div>
+        {audRows.length === 0 ? (
+          <p className="hint" style={{ margin: 0 }}>No audience data yet. Once visitors land (and the <code>session_meta</code> table exists), device + location appear here.</p>
+        ) : (
+          <div className="admin-row" style={{ alignItems: "flex-start", gap: 28 }}>
+            <Breakdown title="Device" rows={audRows} field="device_type" />
+            <Breakdown title="Operating system" rows={audRows} field="os" />
+            <Breakdown title="Top regions" rows={audRows} field="region" max={6} />
+            <Breakdown title="Top countries" rows={audRows} field="country" max={6} />
+          </div>
+        )}
+        <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>Targeting check: most should match your ad geo (e.g. California) and be mostly mobile. Off-geo or heavy desktop = mis-targeting or bots.</p>
       </div>
 
       {loading ? <p className="hint">Loading…</p> : slugs.length === 0 ? (

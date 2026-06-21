@@ -91,3 +91,28 @@ create policy "anyone can insert events"
 drop policy if exists "admins read events" on public.form_events;
 create policy "admins read events"
   on public.form_events for select to authenticated using (true);
+
+-- SESSION META: one row per visitor session — device/OS (from browser) +
+-- country/region (from IP). Powers the "Audience / Targeting" breakdowns.
+create table if not exists public.session_meta (
+  id          bigint generated always as identity primary key,
+  session_id  text,
+  form_slug   text,
+  country     text,
+  region      text,
+  device_type text,
+  os          text,
+  browser     text,
+  created_at  timestamptz default now()
+);
+create index if not exists session_meta_slug_idx on public.session_meta (form_slug);
+
+alter table public.session_meta enable row level security;
+
+drop policy if exists "anyone can insert session" on public.session_meta;
+create policy "anyone can insert session"
+  on public.session_meta for insert to anon, authenticated with check (true);
+
+drop policy if exists "admins read session" on public.session_meta;
+create policy "admins read session"
+  on public.session_meta for select to authenticated using (true);

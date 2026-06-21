@@ -6,7 +6,7 @@ import { applyTheme } from "../lib/applyTheme";
 import { saveLead } from "../lib/leads";
 import { Wordmark } from "../components/Logo";
 import { trackLead } from "../components/MetaPixel";
-import { logStep } from "../lib/track";
+import { logStep, logSession } from "../lib/track";
 
 const CheckIcon = () => (
   <div className="check-icon">
@@ -138,6 +138,11 @@ export default function PublicForm() {
   useEffect(() => {
     if (state === "ready" && form) logStep(form.slug, step);
   }, [step, state, form]);
+
+  // Log the visitor's session once (device + location) for Audience insights.
+  useEffect(() => {
+    if (state === "ready" && form) logSession(form.slug);
+  }, [state, form]);
 
   // Capture Meta / ad attribution from the link (?utm_source=…&fbclid=…)
   // so it travels with the lead all the way into GHL.
