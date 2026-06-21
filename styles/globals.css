@@ -373,3 +373,106 @@ html, body {
   .screen-intro .hipaa-row { margin-top: 7px !important; }
   .screen-intro .clinic-address { font-size: 11px; }
 }
+
+/* ============================================================
+   MOBILE FIT — ALL OTHER STEPS (≤430px). Same goal as the intro:
+   every step fits on one screen with no scrolling. Phones only;
+   desktop (≥431px) is untouched. CSS-only — no data/logic change.
+   ============================================================ */
+@media (max-width: 430px) {
+  /* every step: real mobile viewport height + safe area */
+  .screen { min-height: 100vh; min-height: 100dvh; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+  /* compact header / nav on the inner steps */
+  .header.header-sm { padding: 14px 16px 8px; }
+  .header-sm .logo-rose { width: 32px; height: 32px; }
+  .back-row { padding: 8px 16px 0; }
+  .progress-wrap { padding: 0 16px; }
+
+  /* shared text (intro keeps its own more-specific overrides) */
+  .screen-body { padding: 0 16px; }
+  .eyebrow { margin-top: 12px; margin-bottom: 8px; font-size: 10px; }
+  .screen-title { font-size: 26px; line-height: 1.15; margin-top: 14px; margin-bottom: 10px; }
+  .screen-title-gold { font-size: 25px; line-height: 1.15; margin-bottom: 10px; }
+  .screen-title-lg { font-size: 30px; line-height: 1.1; margin-bottom: 10px; }
+  .screen-subtitle { font-size: 13px; line-height: 1.45; margin-bottom: 16px; }
+  .btn-gold { min-height: 48px; padding: 15px 24px; }
+  .btn-ghost { padding: 10px; margin-top: 8px; }
+
+  /* questions (q1 / q2) */
+  .options-wrap { gap: 10px; margin-bottom: 16px; }
+  .option-btn { padding: 14px 16px; gap: 12px; }
+  .option-label { font-size: 15px; line-height: 1.3; }
+  .radio-ring { width: 22px; height: 22px; }
+
+  /* notes (q3) — the textarea is the tall one */
+  .textarea-field { min-height: 120px; font-size: 15px; padding: 14px; margin-bottom: 14px; }
+
+  /* contact */
+  .field-group { margin-bottom: 14px; }
+  .field-label { margin-bottom: 6px; }
+  .field-input { padding: 13px 14px; font-size: 15px; }
+
+  /* review */
+  .review-card { margin-bottom: 16px; }
+  .review-item { padding: 10px 14px; gap: 10px; }
+  .review-q { font-size: 10px; margin-bottom: 3px; }
+  .review-a { font-size: 15px; line-height: 1.3; }
+  .review-edit { padding: 5px 12px; font-size: 11px; }
+
+  /* privacy */
+  .privacy-card { padding: 14px; margin-bottom: 16px; }
+  .privacy-card-label { margin-bottom: 8px; }
+  .privacy-card-text { font-size: 15px; line-height: 1.5; }
+  .privacy-links { gap: 10px; margin-bottom: 16px; }
+
+  /* confirmation */
+  .confirm-monogram { width: 84px; height: 84px; margin: 6px auto 14px; }
+  .confirm-monogram-inner { font-size: 32px; }
+  .confirm-title { font-size: 32px; margin-bottom: 8px; }
+  .confirm-subtitle { font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+  .steps-card { margin-bottom: 16px; }
+  .step-item { padding: 12px 14px; gap: 14px; }
+  .step-num { width: 32px; height: 32px; font-size: 15px; }
+  .step-text { font-size: 13px; line-height: 1.3; }
+
+  /* verify / security step */
+  .verify-box { margin: 8px 0 16px; min-height: 60px; }
+  .human-fallback { padding: 16px; }
+}
+
+/* shorter phones (≤390px) — tighten the tallest steps */
+@media (max-width: 390px) {
+  .screen-title { font-size: 23px; }
+  .screen-title-gold { font-size: 22px; }
+  .screen-title-lg { font-size: 27px; }
+  .option-btn { padding: 12px 14px; }
+  .option-label { font-size: 14px; }
+  .textarea-field { min-height: 100px; }
+  .review-item { padding: 7px 12px; }
+  .review-q { font-size: 9.5px; margin-bottom: 2px; line-height: 1.3; }
+  .review-a { font-size: 14px; line-height: 1.25; }
+  .confirm-title { font-size: 28px; }
+  .confirm-monogram { width: 72px; height: 72px; }
+  .confirm-monogram-inner { font-size: 28px; }
+}
+
+/* smallest Android (≤360px) */
+@media (max-width: 360px) {
+  .screen-title { font-size: 21px; margin-top: 10px; }
+  .screen-title-gold { font-size: 20px; }
+  .screen-title-lg { font-size: 24px; }
+  .screen-subtitle { font-size: 12px; margin-bottom: 12px; }
+  .option-btn { padding: 11px 13px; }
+  .option-label { font-size: 13.5px; }
+  .textarea-field { min-height: 88px; }
+  .field-group { margin-bottom: 11px; }
+  .review-item { padding: 6px 11px; }
+  .review-q { font-size: 9px; line-height: 1.25; margin-bottom: 2px; }
+  .review-a { font-size: 13px; line-height: 1.2; }
+  .review-card { margin-bottom: 10px; }
+  .review-edit { padding: 4px 10px; font-size: 10px; }
+  .privacy-card-text { font-size: 14px; }
+  .confirm-title { font-size: 26px; }
+  .step-text { font-size: 12px; }
+}
