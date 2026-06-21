@@ -657,10 +657,16 @@ function ContentEditor({ content, setContent, onSave }) {
         <Field label="Headline" value={s.intro.title} onChange={(v) => setScreen("intro", { title: v })} textarea />
         <Field label="Subheadline" value={s.intro.subtitle} onChange={(v) => setScreen("intro", { subtitle: v })} textarea />
         <ListEditor label="Checklist items (add as many as you like)" items={s.intro.checklist} onChange={(items) => setScreen("intro", { checklist: items })} addLabel="Add checklist item" />
-        <div className="admin-row">
-          <div style={{ flex: 1 }}><Field label="Price ($)" value={s.intro.price} onChange={(v) => setScreen("intro", { price: v })} /></div>
-          <div style={{ flex: 2 }}><Field label="Price note" value={s.intro.priceNote} onChange={(v) => setScreen("intro", { priceNote: v })} /></div>
-        </div>
+        <label className="human-fallback" style={{ background: "#0f1115", maxWidth: 420, marginTop: 6 }}>
+          <input type="checkbox" checked={s.intro.showPrice !== false} onChange={(e) => setScreen("intro", { showPrice: e.target.checked })} />
+          <span>Show the price block on this form</span>
+        </label>
+        {s.intro.showPrice !== false && (
+          <div className="admin-row" style={{ marginTop: 12 }}>
+            <div style={{ flex: 1 }}><Field label="Price ($)" value={s.intro.price} onChange={(v) => setScreen("intro", { price: v })} /></div>
+            <div style={{ flex: 2 }}><Field label="Price note" value={s.intro.priceNote} onChange={(v) => setScreen("intro", { priceNote: v })} /></div>
+          </div>
+        )}
         <Field label="Button text" value={s.intro.button} onChange={(v) => setScreen("intro", { button: v })} />
         <Field label="Disclaimer" value={s.intro.disclaimer} onChange={(v) => setScreen("intro", { disclaimer: v })} textarea />
         <Field label="HIPAA badge text" value={s.intro.hipaaText} onChange={(v) => setScreen("intro", { hipaaText: v })} />

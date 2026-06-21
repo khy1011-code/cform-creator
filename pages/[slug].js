@@ -264,10 +264,12 @@ export default function PublicForm() {
                     <div className="check-item" key={i}><CheckIcon /><div className="check-text">{item}</div></div>
                   ))}
                 </div>
-                <div className="price-block">
-                  <div className="price-amount"><sup>$</sup>{s.intro.price}</div>
-                  <div className="price-note">{s.intro.priceNote}</div>
-                </div>
+                {s.intro.showPrice !== false && (
+                  <div className="price-block">
+                    <div className="price-amount"><sup>$</sup>{s.intro.price}</div>
+                    <div className="price-note">{s.intro.priceNote}</div>
+                  </div>
+                )}
                 <button className="btn-gold" onClick={goNext}>{s.intro.button}</button>
                 <div className="disclaimer">{s.intro.disclaimer}</div>
                 <button className="hipaa-row" style={{ marginTop: 16 }} onClick={() => window.open(content.links.hipaaUrl, "_blank")}>
