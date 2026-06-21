@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { getFormBySlug } from "../lib/forms";
+import { getFlow } from "../lib/content";
 import { applyTheme } from "../lib/applyTheme";
 import { saveLead } from "../lib/leads";
 import { Wordmark } from "../components/Logo";
@@ -175,7 +176,16 @@ export default function PublicForm() {
 
   const content = form.data;
   const s = content.screens;
+  const verifyEnabled = content.verify?.enabled !== false; // default on
   const go = (n) => { setStep(n); const app = document.querySelector(".app"); if (app) app.scrollTop = 0; };
+
+  // Dynamic flow (verify inserted at its configured position, or omitted).
+  const flow = getFlow(content);
+  const cur = Math.max(0, flow.indexOf(step));
+  const goNext = () => go(flow[Math.min(cur + 1, flow.length - 1)]);
+  const goBack = () => go(flow[Math.max(cur - 1, 0)]);
+  // Progress % across the active steps (intro = 0, confirm = 100).
+  const pct = Math.round((cur / (flow.length - 1)) * 100);
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -258,7 +268,7 @@ export default function PublicForm() {
                   <div className="price-amount"><sup>$</sup>{s.intro.price}</div>
                   <div className="price-note">{s.intro.priceNote}</div>
                 </div>
-                <button className="btn-gold" onClick={() => go("verify")}>{s.intro.button}</button>
+                <button className="btn-gold" onClick={goNext}>{s.intro.button}</button>
                 <div className="disclaimer">{s.intro.disclaimer}</div>
                 <button className="hipaa-row" style={{ marginTop: 16 }} onClick={() => window.open(content.links.hipaaUrl, "_blank")}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
@@ -269,11 +279,11 @@ export default function PublicForm() {
             </div>
           )}
 
-          {/* SCREEN: HUMAN VERIFICATION (new) */}
-          {step === "verify" && (
+          {/* SCREEN: HUMAN VERIFICATION (optional — toggled per form) */}
+          {verifyEnabled && step === "verify" && (
             <div className="screen">
               <div className="header header-sm"><Wordmark brand={content.brand} photo={content.photo} /></div>
-              <BackBar onBack={() => go("intro")} />
+              <BackBar onBack={goBack} />
               <div className="screen-body">
                 <div className="eyebrow" style={{ marginTop: 18 }}>Security Check</div>
                 <h2 className="screen-title">Quick check — confirm you&rsquo;re human</h2>
@@ -283,7 +293,7 @@ export default function PublicForm() {
                   <HumanCheck verified={verified} onChange={setVerified} />
                 </div>
 
-                <button className="btn-gold" disabled={!verified} onClick={() => go("q1")}>Continue</button>
+                <button className="btn-gold" disabled={!verified} onClick={goNext}>Continue</button>
               </div>
             </div>
           )}
@@ -292,8 +302,8 @@ export default function PublicForm() {
           {step === "q1" && (
             <div className="screen">
               <div className="header header-sm"><Wordmark brand={content.brand} photo={content.photo} /></div>
-              <BackBar onBack={() => go("verify")} />
-              <Progress pct={20} label={s.q1.progressLabel} />
+              <BackBar onBack={goBack} />
+              <Progress pct={pct} label={s.q1.progressLabel} />
               <div className="screen-body">
                 <h2 className="screen-title">{s.q1.title}</h2>
                 <p className="screen-subtitle">{s.q1.subtitle}</p>
@@ -305,7 +315,7 @@ export default function PublicForm() {
                     </button>
                   ))}
                 </div>
-                <button className="btn-gold" onClick={() => go("q2")}>{s.q1.button}</button>
+                <button className="btn-gold" onClick={goNext}>{s.q1.button}</button>
               </div>
             </div>
           )}
@@ -314,8 +324,8 @@ export default function PublicForm() {
           {step === "q2" && (
             <div className="screen">
               <div className="header header-sm"><Wordmark brand={content.brand} photo={content.photo} /></div>
-              <BackBar onBack={() => go("q1")} />
-              <Progress pct={40} />
+              <BackBar onBack={goBack} />
+              <Progress pct={pct} />
               <div className="screen-body">
                 <div className="eyebrow" style={{ marginTop: 18 }}>{s.q2.progressLabel}</div>
                 <h2 className="screen-title-gold">{s.q2.title}</h2>
@@ -328,7 +338,7 @@ export default function PublicForm() {
                     </button>
                   ))}
                 </div>
-                <button className="btn-gold" onClick={() => go("q3")}>{s.q2.button}</button>
+                <button className="btn-gold" onClick={goNext}>{s.q2.button}</button>
               </div>
             </div>
           )}
@@ -337,15 +347,15 @@ export default function PublicForm() {
           {step === "q3" && (
             <div className="screen">
               <div className="header header-sm"><Wordmark brand={content.brand} photo={content.photo} /></div>
-              <BackBar onBack={() => go("q2")} />
-              <Progress pct={60} />
+              <BackBar onBack={goBack} />
+              <Progress pct={pct} />
               <div className="screen-body">
                 <div className="eyebrow" style={{ marginTop: 18 }}>{s.q3.eyebrow}</div>
                 <h2 className="screen-title">{s.q3.title}</h2>
                 <p className="screen-subtitle" style={{ fontStyle: "italic" }}>{s.q3.subtitle}</p>
                 <textarea className="textarea-field" placeholder={s.q3.placeholder} value={answers.notes} onChange={(e) => setAnswers({ ...answers, notes: e.target.value })} />
-                <button className="btn-gold" onClick={() => go("contact")}>{s.q3.button}</button>
-                <button className="btn-ghost" onClick={() => go("contact")}>{s.q3.skip}</button>
+                <button className="btn-gold" onClick={goNext}>{s.q3.button}</button>
+                <button className="btn-ghost" onClick={goNext}>{s.q3.skip}</button>
               </div>
             </div>
           )}
@@ -354,8 +364,8 @@ export default function PublicForm() {
           {step === "contact" && (
             <div className="screen">
               <div className="header header-sm"><Wordmark brand={content.brand} photo={content.photo} /></div>
-              <BackBar onBack={() => go("q3")} />
-              <Progress pct={78} />
+              <BackBar onBack={goBack} />
+              <Progress pct={pct} />
               <div className="screen-body">
                 <div className="eyebrow" style={{ marginTop: 18 }}>{s.contact.eyebrow}</div>
                 <h2 className="screen-title">{s.contact.title}</h2>
@@ -372,7 +382,7 @@ export default function PublicForm() {
                   <label className="field-label">{s.contact.emailLabel}</label>
                   <input className="field-input" type="email" placeholder="you@email.com" autoComplete="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
                 </div>
-                <button className="btn-gold" disabled={!contactValid} onClick={() => go("review")}>{s.contact.button}</button>
+                <button className="btn-gold" disabled={!contactValid} onClick={goNext}>{s.contact.button}</button>
               </div>
             </div>
           )}
@@ -381,8 +391,8 @@ export default function PublicForm() {
           {step === "review" && (
             <div className="screen">
               <div className="header header-sm"><Wordmark brand={content.brand} photo={content.photo} /></div>
-              <BackBar onBack={() => go("contact")} />
-              <Progress pct={92} />
+              <BackBar onBack={goBack} />
+              <Progress pct={pct} />
               <div className="screen-body">
                 <div className="eyebrow" style={{ marginTop: 18 }}>Review</div>
                 <h2 className="screen-title">Please review before you submit</h2>
@@ -397,7 +407,7 @@ export default function PublicForm() {
                   <ReviewItem label={s.contact.emailLabel} value={contact.email} onEdit={() => go("contact")} />
                 </div>
 
-                <button className="btn-gold" onClick={() => go("privacy")}>Confirm &amp; Continue</button>
+                <button className="btn-gold" onClick={goNext}>Confirm &amp; Continue</button>
               </div>
             </div>
           )}
@@ -406,8 +416,8 @@ export default function PublicForm() {
           {step === "privacy" && (
             <div className="screen">
               <div className="header header-sm"><Wordmark brand={content.brand} photo={content.photo} /></div>
-              <BackBar onBack={() => go("review")} />
-              <Progress pct={97} />
+              <BackBar onBack={goBack} />
+              <Progress pct={pct} />
               <div className="screen-body">
                 <div className="eyebrow" style={{ marginTop: 18 }}>{s.privacy.eyebrow}</div>
                 <h2 className="screen-title-lg">{s.privacy.title}</h2>

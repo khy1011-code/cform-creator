@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
-import { DEFAULT_CONTENT } from "../lib/content";
+import { DEFAULT_CONTENT, getFlow, STEP_LABELS, VERIFY_AFTER_OPTIONS } from "../lib/content";
 import { applyTheme } from "../lib/applyTheme";
 import { listLeads, deleteLead, updateLead } from "../lib/leads";
 import { getFunnelEvents, getSessionMeta } from "../lib/track";
@@ -440,17 +440,13 @@ function fmt(iso) {
 }
 
 /* ===================== FUNNEL INSIGHTS ===================== */
-const FUNNEL_STEPS = [
-  ["intro", "1 · Landing / Intro"],
-  ["verify", "2 · Human check"],
-  ["q1", "3 · Question 1"],
-  ["q2", "4 · Question 2"],
-  ["q3", "5 · Question 3 (notes)"],
-  ["contact", "6 · Contact info"],
-  ["review", "7 · Review"],
-  ["privacy", "8 · Privacy"],
-  ["confirm", "9 · Submitted ✅"],
-];
+// Per-form step list = the form's actual flow (verify on/off + placement),
+// so the funnel always matches what visitors really saw.
+function stepsForForm(forms, slug) {
+  const f = forms.find((x) => x.slug === slug);
+  const keys = getFlow(f && f.data ? f.data : {});
+  return keys.map((k, i) => ({ k, label: `${i + 1} · ${STEP_LABELS[k] || k}` }));
+}
 
 // Count occurrences of a field across rows → sorted [ [label, n], ... ].
 function tally(rows, field) {
@@ -552,7 +548,7 @@ function FunnelInsights({ forms }) {
         <p className="hint">No funnel data yet. Once visitors hit your forms (and the <code>form_events</code> table exists), counts appear here.</p>
       ) : (
         slugs.map((slug) => {
-          const stepCounts = FUNNEL_STEPS.map(([k, label]) => ({ k, label, n: (byForm[slug][k] || new Set()).size }));
+          const stepCounts = stepsForForm(forms, slug).map(({ k, label }) => ({ k, label, n: (byForm[slug][k] || new Set()).size }));
           const top = stepCounts[0].n || 0;
           const leadCount = leads.filter((l) => l.form_slug === slug).length;
           const submitted = stepCounts[stepCounts.length - 1].n;
@@ -622,8 +618,27 @@ function SaveBar({ onSave }) {
 function ContentEditor({ content, setContent, onSave }) {
   const s = content.screens;
   const setScreen = (key, patch) => setContent({ ...content, screens: { ...s, [key]: { ...s[key], ...patch } } });
+  const verify = content.verify || { enabled: true, after: "intro" };
+  const setVerify = (patch) => setContent({ ...content, verify: { ...verify, ...patch } });
   return (
     <>
+      <div className="admin-card">
+        <h2>🛡️ Security check (bot verification)</h2>
+        <p className="hint">An optional “verify you’re human” step. Turn it off to A/B test whether it’s a roadblock — when off, it disappears from the form <i>and</i> the Funnel Insights.</p>
+        <label className="human-fallback" style={{ background: "#0f1115", maxWidth: 420 }}>
+          <input type="checkbox" checked={verify.enabled !== false} onChange={(e) => setVerify({ enabled: e.target.checked })} />
+          <span>Show the security check step</span>
+        </label>
+        {verify.enabled !== false && (
+          <div style={{ marginTop: 14 }}>
+            <label className="admin-label">Where should it appear?</label>
+            <select className="admin-input" style={{ maxWidth: 420 }} value={verify.after || "intro"} onChange={(e) => setVerify({ after: e.target.value })}>
+              {VERIFY_AFTER_OPTIONS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+            </select>
+          </div>
+        )}
+      </div>
+
       <div className="admin-card">
         <h2>Brand (shown on this form)</h2>
         <Field label="Business / form name" value={content.brand.name} onChange={(v) => setContent({ ...content, brand: { ...content.brand, name: v } })} />
