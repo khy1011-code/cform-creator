@@ -286,3 +286,90 @@ html, body {
 .funnel-bar { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 6px; transition: width 0.4s ease; min-width: 2px; }
 .funnel-num { width: 84px; flex-shrink: 0; text-align: right; font-weight: 600; font-size: 14px; color: #e7e9ee; }
 .funnel-pct { color: #8b93a4; font-weight: 400; font-size: 12px; margin-left: 6px; }
+
+/* ============================================================
+   MOBILE INTRO FIT — phones only (≤430px). The desktop "phone
+   frame" renders at ≥431px and is intentionally LEFT UNTOUCHED.
+   Goal: all intro content + the CTA fit on one screen with no
+   scrolling. Scoped to .screen-intro so no other step changes.
+   ============================================================ */
+@media (max-width: 430px) {
+  /* Real mobile viewport height — handles Android/iOS browser chrome
+     (URL bar, bottom nav). dvh with vh fallback for older Android. */
+  .ty-shell { min-height: 100vh; min-height: 100dvh; }
+  .app { min-height: 100vh; min-height: 100dvh; overflow: hidden; }
+  .screen-intro { min-height: 100vh; min-height: 100dvh; padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-top: env(safe-area-inset-top); }
+
+  /* Logo / header */
+  .screen-intro .header-badge { padding: 12px 16px 0; gap: 10px; }
+  .screen-intro .badge-circle { width: 42px; height: 42px; font-size: 14px; }
+  .screen-intro .badge-name { font-size: 14px; }
+  .screen-intro .badge-detail { font-size: 12px; }
+
+  /* Body spacing */
+  .screen-intro .screen-body { padding: 0 16px; }
+  .screen-intro .eyebrow { margin: 9px 0 7px; font-size: 10px; letter-spacing: 0.16em; }
+
+  /* Headline */
+  .screen-intro .screen-title-lg { font-size: 27px; line-height: 1.12; margin-bottom: 8px; overflow-wrap: break-word; }
+
+  /* Subtitle */
+  .screen-intro .screen-subtitle { font-size: 13px; line-height: 1.4; margin-bottom: 12px; }
+
+  /* Bullet checklist */
+  .screen-intro .checklist-card { margin-bottom: 12px; }
+  .screen-intro .check-item { padding: 9px 14px; gap: 12px; }
+  .screen-intro .check-icon { width: 26px; height: 26px; }
+  .screen-intro .check-icon svg { width: 13px; height: 13px; }
+  .screen-intro .check-text { font-size: 13px; line-height: 1.3; }
+
+  /* Price */
+  .screen-intro .price-block { margin-bottom: 12px; gap: 12px; }
+  .screen-intro .price-amount { font-size: 40px; }
+  .screen-intro .price-amount sup { font-size: 18px; margin-top: 8px; }
+  .screen-intro .price-note { font-size: 12px; line-height: 1.35; }
+
+  /* CTA — unchanged position; just guarantee a 48px touch target */
+  .screen-intro .btn-gold { min-height: 48px; padding: 15px 24px; }
+
+  /* Below the button */
+  .screen-intro .disclaimer { font-size: 11px; line-height: 1.4; margin-top: 8px; padding: 0 8px; }
+  .screen-intro .hipaa-row { margin-top: 9px !important; font-size: 11px; }
+  .screen-intro .clinic-address { font-size: 12px; margin-top: 4px; }
+}
+
+/* Samsung Galaxy S (≤412px) */
+@media (max-width: 412px) {
+  .screen-intro .screen-title-lg { font-size: 25px; }
+  .screen-intro .price-amount { font-size: 38px; }
+}
+
+/* iPhone 14 / Pixel 7 (≤390px) */
+@media (max-width: 390px) {
+  .screen-intro .screen-title-lg { font-size: 23px; line-height: 1.1; }
+  .screen-intro .screen-subtitle { font-size: 12px; margin-bottom: 10px; }
+  .screen-intro .check-item { padding: 8px 12px; }
+  .screen-intro .check-text { font-size: 12px; }
+  .screen-intro .price-amount { font-size: 34px; }
+  .screen-intro .price-amount sup { font-size: 16px; margin-top: 6px; }
+  .screen-intro .price-note { font-size: 11px; }
+}
+
+/* Small Android — Samsung Galaxy A (≤360px) */
+@media (max-width: 360px) {
+  .screen-intro .header-badge { padding: 8px 14px 0; }
+  .screen-intro .badge-circle { width: 38px; height: 38px; }
+  .screen-intro .eyebrow { margin: 6px 0 5px; }
+  .screen-intro .screen-title-lg { font-size: 21px; line-height: 1.1; margin-bottom: 6px; }
+  .screen-intro .screen-subtitle { font-size: 11.5px; line-height: 1.35; margin-bottom: 8px; }
+  .screen-intro .checklist-card { margin-bottom: 8px; }
+  .screen-intro .check-item { padding: 6px 12px; }
+  .screen-intro .check-text { font-size: 11.5px; line-height: 1.25; }
+  .screen-intro .check-icon { width: 23px; height: 23px; }
+  .screen-intro .price-block { margin-bottom: 8px; }
+  .screen-intro .price-amount { font-size: 30px; }
+  .screen-intro .price-amount sup { font-size: 14px; margin-top: 5px; }
+  .screen-intro .disclaimer { font-size: 10px; margin-top: 6px; }
+  .screen-intro .hipaa-row { margin-top: 7px !important; }
+  .screen-intro .clinic-address { font-size: 11px; }
+}

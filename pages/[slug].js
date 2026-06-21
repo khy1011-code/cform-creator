@@ -244,7 +244,7 @@ export default function PublicForm() {
         <div className="app">
           {/* SCREEN: INTRO */}
           {step === "intro" && (
-            <div className="screen">
+            <div className="screen screen-intro">
               <div className="header-badge">
                 <div className="badge-circle">
                   {content.photo ? <img src={content.photo} alt="Profile" /> : content.brand.initials}
